@@ -70,6 +70,12 @@ class SpinningWheelState extends State<SpinningWheel>
   bool get hasEmptyEditText =>
       _isEditing && _textController.text.trim().isEmpty;
 
+  /// Returns true if the wheel has a valid selected input.
+  /// This is true if the wheel is locked (manually or via spin) OR
+  /// if in edit mode with non-empty text.
+  bool get hasSelectedInput =>
+      _isLocked || (_isEditing && _textController.text.trim().isNotEmpty);
+
   @override
   void initState() {
     super.initState();
@@ -121,8 +127,12 @@ class SpinningWheelState extends State<SpinningWheel>
       curve: Curves.easeOutCubic,
     );
 
+    // Auto-lock the wheel after spinning completes
+    final finalPosition = _controller.selectedItem;
     setState(() {
       _isSpinning = false;
+      _lockedPosition = finalPosition;
+      _isLocked = true;
     });
 
     final result = widget.items[randomIndex];

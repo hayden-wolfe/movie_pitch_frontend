@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:movie_pitch_generator/data/wheel_data.dart';
 import 'package:movie_pitch_generator/models/pitch_result.dart';
 import 'package:movie_pitch_generator/services/pitch_api_service.dart';
-import 'package:movie_pitch_generator/widgets/spin_button.dart';
+import 'package:movie_pitch_generator/widgets/action_buttons.dart';
+import 'package:movie_pitch_generator/widgets/generating_pitch_dialog.dart';
 import 'package:movie_pitch_generator/widgets/spinning_wheel.dart';
 import 'package:movie_pitch_generator/widgets/wheel_category_section.dart';
 import 'package:movie_pitch_generator/screens/pitch_result_screen.dart';
@@ -72,7 +73,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _spinAllWheels() async {
+  /// Spins all non-locked wheels. Wheels auto-lock after spinning.
+  Future<void> _spinWheels() async {
     if (_isSpinning) return;
 
     // Check for empty textboxes in edit mode
@@ -100,10 +102,56 @@ class _HomeScreenState extends State<HomeScreen> {
       _isSpinning = true;
     });
 
-    // Collect all spin futures
+    // Collect all spin futures for non-locked wheels
     final List<Future<String>> spinFutures = [];
-    final Map<String, List<String>> selections = {};
 
+    for (final category in wheelCategories) {
+      final wheelCount = _wheelCounts[category.id]!;
+      final keys = _wheelKeys[category.id]!;
+
+      for (int i = 0; i < wheelCount; i++) {
+        final key = keys[i];
+        if (key.currentState != null && !key.currentState!.isLocked) {
+          spinFutures.add(key.currentState!.spin());
+        }
+      }
+    }
+
+    // Wait for all spins to complete (they auto-lock now)
+    await Future.wait(spinFutures);
+
+    setState(() {
+      _isSpinning = false;
+    });
+  }
+
+  /// Validates all wheels have input and generates the pitch.
+  Future<void> _generatePitch() async {
+    if (_isGeneratingPitch) return;
+
+    // Validate all wheels have selected input
+    for (final category in wheelCategories) {
+      final wheelCount = _wheelCounts[category.id]!;
+      final keys = _wheelKeys[category.id]!;
+
+      for (int i = 0; i < wheelCount; i++) {
+        final key = keys[i];
+        if (key.currentState != null && !key.currentState!.hasSelectedInput) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Please spin or lock all ${category.displayName} wheels before generating.',
+              ),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+          return;
+        }
+      }
+    }
+
+    // Collect all selections
+    final Map<String, List<String>> selections = {};
     for (final category in wheelCategories) {
       final wheelCount = _wheelCounts[category.id]!;
       final keys = _wheelKeys[category.id]!;
@@ -112,23 +160,25 @@ class _HomeScreenState extends State<HomeScreen> {
       for (int i = 0; i < wheelCount; i++) {
         final key = keys[i];
         if (key.currentState != null) {
-          spinFutures.add(
-            key.currentState!.spin().then((value) {
-              selections[category.id]!.add(value);
-              return value;
-            }),
-          );
+          selections[category.id]!.add(key.currentState!.selectedItem);
         }
       }
     }
 
-    // Wait for all wheels to complete
-    await Future.wait(spinFutures);
-
     setState(() {
-      _isSpinning = false;
       _isGeneratingPitch = true;
     });
+
+    // Show the loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => GeneratingPitchDialog(
+            selections: selections,
+            categoryColors: categoryColors,
+          ),
+    );
 
     // Generate pitch from API
     try {
@@ -139,6 +189,11 @@ class _HomeScreenState extends State<HomeScreen> {
         genres: selections['genres'] ?? [],
       );
 
+      // Dismiss the loading dialog
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
       setState(() {
         _isGeneratingPitch = false;
       });
@@ -147,6 +202,11 @@ class _HomeScreenState extends State<HomeScreen> {
         _navigateToPitchResult(result, selections);
       }
     } catch (e) {
+      // Dismiss the loading dialog
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
       setState(() {
         _isGeneratingPitch = false;
       });
@@ -273,15 +333,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // Spin button
+              // Action buttons (Spin & Generate)
               Padding(
                 padding: const EdgeInsets.all(24),
-                child: SpinButton(
-                  onPressed:
-                      (_isSpinning || _isGeneratingPitch)
-                          ? null
-                          : _spinAllWheels,
-                  isLoading: _isSpinning || _isGeneratingPitch,
+                child: ActionButtons(
+                  onSpinPressed: _spinWheels,
+                  onGeneratePressed: _generatePitch,
+                  isSpinning: _isSpinning,
+                  isGenerating: _isGeneratingPitch,
                 ),
               ),
             ],
