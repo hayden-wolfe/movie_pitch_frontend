@@ -224,17 +224,19 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 child: Column(
                   children: [
                     Text(
                       '🎬 Movie Pitch Generator',
-                      style: theme.textTheme.headlineMedium?.copyWith(
+                      style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 8),
                     Text(
                       'Spin the wheels to generate your next blockbuster!',
                       style: theme.textTheme.bodyMedium?.copyWith(

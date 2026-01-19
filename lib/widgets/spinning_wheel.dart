@@ -14,7 +14,7 @@ class SpinningWheel extends StatefulWidget {
   const SpinningWheel({
     super.key,
     required this.items,
-    this.itemExtent = 60.0,
+    this.itemExtent = 48.0,
     this.onSpinComplete,
     this.accentColor,
   });
@@ -258,7 +258,7 @@ class SpinningWheelState extends State<SpinningWheel>
 
   Widget _buildEditInput(ThemeData theme, Color accentColor) {
     return Container(
-      height: 220,
+      height: 140,
       width: 140,
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -338,7 +338,7 @@ class SpinningWheelState extends State<SpinningWheel>
     final lockedItem = widget.items[_lockedPosition % widget.items.length];
 
     return Container(
-      height: 220,
+      height: 140,
       width: 140,
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -374,7 +374,7 @@ class SpinningWheelState extends State<SpinningWheel>
           // Centered locked item display
           Center(
             child: Container(
-              height: widget.itemExtent - 8,
+              height: widget.itemExtent - 4,
               width: 120,
               alignment: Alignment.center,
               decoration: BoxDecoration(
@@ -424,7 +424,7 @@ class SpinningWheelState extends State<SpinningWheel>
 
   Widget _buildWheel(ThemeData theme, Color accentColor) {
     return Container(
-      height: 220,
+      height: 140,
       width: 140,
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -465,7 +465,7 @@ class SpinningWheelState extends State<SpinningWheel>
                     widget.items.map((item) {
                       return Center(
                         child: Container(
-                          height: widget.itemExtent - 8,
+                          height: widget.itemExtent - 4,
                           width: 120,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
