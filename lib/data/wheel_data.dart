@@ -3,47 +3,50 @@ import 'package:movie_pitch_generator/models/wheel_category.dart';
 /// Predefined items for each wheel category.
 const List<String> characterItems = [
   'Baker Mayfield',
-  'A rogue AI',
+  'Ernie Johnson',
   'Rachel McAdams',
+  'Harrison Ford',
+  'Carrie Fisher',
+  'Russell Westbrook',
   'Johnny Drama',
   'A talking dog detective',
+  'Walton Goggins',
 ];
 
 const List<String> creativeItems = [
   'Christopher Nolan',
-  'Greta Gerwig',
-  'Quentin Tarantino',
-  'Denis Villeneuve',
+  'Steven Spielberg',
   'Jordan Peele',
-  'The Russo Brothers',
   'Rian Johnson',
+  'Danny McBride',
   'Ava DuVernay',
+  'Denis Villeneuve',
+  'Kathryn Bigelow',
 ];
 
 const List<String> locationItems = [
-  'A futuristic Tokyo',
-  'A haunted Victorian mansion',
+  'Norman, OK',
+  "Braum's Ice Cream Store",
+  'Oklahoma Memorial Stadium',
+  'Texas State Fair',
   'A colony on Mars',
-  'An underwater kingdom',
-  'A magical forest',
-  'A dystopian megacity',
-  'A secret underground lab',
-  'A floating sky island',
-  'An abandoned theme park',
-  'A parallel dimension',
+  'Rome, Italy',
+  'A futuristic Tokyo',
+  'New York City',
 ];
 
 const List<String> genreItems = [
-  'Sci-Fi',
-  'Horror',
   'Comedy',
   'Action',
   'Romance',
   'Thriller',
+  'Sci-Fi',
+  'Horror',
   'Fantasy',
   'Mystery',
   'Drama',
   'Animation',
+  'Family',
 ];
 
 /// All wheel categories with their configurations.
