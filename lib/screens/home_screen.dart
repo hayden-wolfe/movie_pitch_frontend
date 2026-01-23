@@ -260,6 +260,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Widget _buildCategoryWidget(int index) {
+    final category = wheelCategories[index];
+    return WheelCategorySection(
+      category: category,
+      currentWheelCount: _wheelCounts[category.id]!,
+      wheelKeys: _wheelKeys[category.id]!.sublist(
+        0,
+        _wheelCounts[category.id]!,
+      ),
+      onAddWheel: () => _addWheel(category.id),
+      onRemoveWheel: () => _removeWheel(category.id),
+      accentColor: categoryColors[index % categoryColors.length],
+      isDisabled: _isSpinning || _isGeneratingPitch,
+    );
+  }
+
   @override
   void dispose() {
     _apiService.dispose();
@@ -318,26 +334,47 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // Wheel categories
+              // Wheel categories - responsive grid/list layout
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: wheelCategories.length,
-                  itemBuilder: (context, index) {
-                    final category = wheelCategories[index];
-                    return WheelCategorySection(
-                      category: category,
-                      currentWheelCount: _wheelCounts[category.id]!,
-                      wheelKeys: _wheelKeys[category.id]!.sublist(
-                        0,
-                        _wheelCounts[category.id]!,
-                      ),
-                      onAddWheel: () => _addWheel(category.id),
-                      onRemoveWheel: () => _removeWheel(category.id),
-                      accentColor:
-                          categoryColors[index % categoryColors.length],
-                      isDisabled: _isSpinning || _isGeneratingPitch,
-                    );
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWideScreen = constraints.maxWidth > 800;
+
+                    if (isWideScreen) {
+                      // Grid layout for wide screens (2x2) - scrollable if too short
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Column(
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: _buildCategoryWidget(0)),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildCategoryWidget(1)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: _buildCategoryWidget(2)),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildCategoryWidget(3)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    } else {
+                      // List layout for narrow screens
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: wheelCategories.length,
+                        itemBuilder:
+                            (context, index) => _buildCategoryWidget(index),
+                      );
+                    }
                   },
                 ),
               ),
