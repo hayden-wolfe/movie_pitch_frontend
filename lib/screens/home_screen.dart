@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:movie_pitch_generator/data/wheel_data.dart';
 import 'package:movie_pitch_generator/models/pitch_result.dart';
 import 'package:movie_pitch_generator/services/pitch_api_service.dart';
-import 'package:movie_pitch_generator/widgets/spin_button.dart';
+import 'package:movie_pitch_generator/widgets/action_buttons.dart';
+import 'package:movie_pitch_generator/widgets/generating_pitch_dialog.dart';
 import 'package:movie_pitch_generator/widgets/spinning_wheel.dart';
 import 'package:movie_pitch_generator/widgets/wheel_category_section.dart';
 import 'package:movie_pitch_generator/screens/pitch_result_screen.dart';
@@ -55,6 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _addWheel(String categoryId) {
+    if (_isSpinning || _isGeneratingPitch) {
+      return; // Prevent changes while spinning
+    }
+
     final category = wheelCategories.firstWhere((c) => c.id == categoryId);
     if (_wheelCounts[categoryId]! < category.maxWheels) {
       setState(() {
@@ -64,6 +69,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _removeWheel(String categoryId) {
+    if (_isSpinning || _isGeneratingPitch) {
+      return; // Prevent changes while spinning
+    }
+
     final category = wheelCategories.firstWhere((c) => c.id == categoryId);
     if (_wheelCounts[categoryId]! > category.minWheels) {
       setState(() {
@@ -72,7 +81,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _spinAllWheels() async {
+  /// Spins all non-locked wheels. Wheels auto-lock after spinning.
+  Future<void> _spinWheels() async {
     if (_isSpinning) return;
 
     // Check for empty textboxes in edit mode
@@ -100,10 +110,56 @@ class _HomeScreenState extends State<HomeScreen> {
       _isSpinning = true;
     });
 
-    // Collect all spin futures
+    // Collect all spin futures for non-locked wheels
     final List<Future<String>> spinFutures = [];
-    final Map<String, List<String>> selections = {};
 
+    for (final category in wheelCategories) {
+      final wheelCount = _wheelCounts[category.id]!;
+      final keys = _wheelKeys[category.id]!;
+
+      for (int i = 0; i < wheelCount; i++) {
+        final key = keys[i];
+        if (key.currentState != null && !key.currentState!.isLocked) {
+          spinFutures.add(key.currentState!.spin());
+        }
+      }
+    }
+
+    // Wait for all spins to complete (they auto-lock now)
+    await Future.wait(spinFutures);
+
+    setState(() {
+      _isSpinning = false;
+    });
+  }
+
+  /// Validates all wheels have input and generates the pitch.
+  Future<void> _generatePitch() async {
+    if (_isGeneratingPitch) return;
+
+    // Validate all wheels have selected input
+    for (final category in wheelCategories) {
+      final wheelCount = _wheelCounts[category.id]!;
+      final keys = _wheelKeys[category.id]!;
+
+      for (int i = 0; i < wheelCount; i++) {
+        final key = keys[i];
+        if (key.currentState != null && !key.currentState!.hasSelectedInput) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Please spin or lock all ${category.displayName} wheels before generating.',
+              ),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+          return;
+        }
+      }
+    }
+
+    // Collect all selections
+    final Map<String, List<String>> selections = {};
     for (final category in wheelCategories) {
       final wheelCount = _wheelCounts[category.id]!;
       final keys = _wheelKeys[category.id]!;
@@ -112,23 +168,25 @@ class _HomeScreenState extends State<HomeScreen> {
       for (int i = 0; i < wheelCount; i++) {
         final key = keys[i];
         if (key.currentState != null) {
-          spinFutures.add(
-            key.currentState!.spin().then((value) {
-              selections[category.id]!.add(value);
-              return value;
-            }),
-          );
+          selections[category.id]!.add(key.currentState!.selectedItem);
         }
       }
     }
 
-    // Wait for all wheels to complete
-    await Future.wait(spinFutures);
-
     setState(() {
-      _isSpinning = false;
       _isGeneratingPitch = true;
     });
+
+    // Show the loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => GeneratingPitchDialog(
+            selections: selections,
+            categoryColors: categoryColors,
+          ),
+    );
 
     // Generate pitch from API
     try {
@@ -139,6 +197,11 @@ class _HomeScreenState extends State<HomeScreen> {
         genres: selections['genres'] ?? [],
       );
 
+      // Dismiss the loading dialog
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
       setState(() {
         _isGeneratingPitch = false;
       });
@@ -147,6 +210,11 @@ class _HomeScreenState extends State<HomeScreen> {
         _navigateToPitchResult(result, selections);
       }
     } catch (e) {
+      // Dismiss the loading dialog
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
       setState(() {
         _isGeneratingPitch = false;
       });
@@ -190,6 +258,22 @@ class _HomeScreenState extends State<HomeScreen> {
         keys[i].currentState?.reset();
       }
     }
+  }
+
+  Widget _buildCategoryWidget(int index) {
+    final category = wheelCategories[index];
+    return WheelCategorySection(
+      category: category,
+      currentWheelCount: _wheelCounts[category.id]!,
+      wheelKeys: _wheelKeys[category.id]!.sublist(
+        0,
+        _wheelCounts[category.id]!,
+      ),
+      onAddWheel: () => _addWheel(category.id),
+      onRemoveWheel: () => _removeWheel(category.id),
+      accentColor: categoryColors[index % categoryColors.length],
+      isDisabled: _isSpinning || _isGeneratingPitch,
+    );
   }
 
   @override
@@ -250,38 +334,59 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // Wheel categories
+              // Wheel categories - responsive grid/list layout
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: wheelCategories.length,
-                  itemBuilder: (context, index) {
-                    final category = wheelCategories[index];
-                    return WheelCategorySection(
-                      category: category,
-                      currentWheelCount: _wheelCounts[category.id]!,
-                      wheelKeys: _wheelKeys[category.id]!.sublist(
-                        0,
-                        _wheelCounts[category.id]!,
-                      ),
-                      onAddWheel: () => _addWheel(category.id),
-                      onRemoveWheel: () => _removeWheel(category.id),
-                      accentColor:
-                          categoryColors[index % categoryColors.length],
-                    );
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWideScreen = constraints.maxWidth > 800;
+
+                    if (isWideScreen) {
+                      // Grid layout for wide screens (2x2) - scrollable if too short
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Column(
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: _buildCategoryWidget(0)),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildCategoryWidget(1)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: _buildCategoryWidget(2)),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildCategoryWidget(3)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    } else {
+                      // List layout for narrow screens
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: wheelCategories.length,
+                        itemBuilder:
+                            (context, index) => _buildCategoryWidget(index),
+                      );
+                    }
                   },
                 ),
               ),
 
-              // Spin button
+              // Action buttons (Spin & Generate)
               Padding(
                 padding: const EdgeInsets.all(24),
-                child: SpinButton(
-                  onPressed:
-                      (_isSpinning || _isGeneratingPitch)
-                          ? null
-                          : _spinAllWheels,
-                  isLoading: _isSpinning || _isGeneratingPitch,
+                child: ActionButtons(
+                  onSpinPressed: _spinWheels,
+                  onGeneratePressed: _generatePitch,
+                  isSpinning: _isSpinning,
+                  isGenerating: _isGeneratingPitch,
                 ),
               ),
             ],
