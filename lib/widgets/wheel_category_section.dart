@@ -11,6 +11,7 @@ class WheelCategorySection extends StatefulWidget {
   final VoidCallback onAddWheel;
   final VoidCallback onRemoveWheel;
   final Color accentColor;
+  final bool isDisabled;
 
   const WheelCategorySection({
     super.key,
@@ -20,6 +21,7 @@ class WheelCategorySection extends StatefulWidget {
     required this.onAddWheel,
     required this.onRemoveWheel,
     required this.accentColor,
+    this.isDisabled = false,
   });
 
   @override
@@ -65,7 +67,10 @@ class _WheelCategorySectionState extends State<WheelCategorySection>
                 children: [
                   _buildControlButton(
                     icon: Icons.remove,
-                    onPressed: canRemove ? widget.onRemoveWheel : null,
+                    onPressed:
+                        (canRemove && !widget.isDisabled)
+                            ? widget.onRemoveWheel
+                            : null,
                     theme: theme,
                   ),
                   Padding(
@@ -74,14 +79,17 @@ class _WheelCategorySectionState extends State<WheelCategorySection>
                       '${widget.currentWheelCount} / ${widget.category.maxWheels}',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.7,
+                          alpha: widget.isDisabled ? 0.4 : 0.7,
                         ),
                       ),
                     ),
                   ),
                   _buildControlButton(
                     icon: Icons.add,
-                    onPressed: canAdd ? widget.onAddWheel : null,
+                    onPressed:
+                        (canAdd && !widget.isDisabled)
+                            ? widget.onAddWheel
+                            : null,
                     theme: theme,
                   ),
                 ],

@@ -56,6 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _addWheel(String categoryId) {
+    if (_isSpinning || _isGeneratingPitch) {
+      return; // Prevent changes while spinning
+    }
+
     final category = wheelCategories.firstWhere((c) => c.id == categoryId);
     if (_wheelCounts[categoryId]! < category.maxWheels) {
       setState(() {
@@ -65,6 +69,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _removeWheel(String categoryId) {
+    if (_isSpinning || _isGeneratingPitch) {
+      return; // Prevent changes while spinning
+    }
+
     final category = wheelCategories.firstWhere((c) => c.id == categoryId);
     if (_wheelCounts[categoryId]! > category.minWheels) {
       setState(() {
@@ -328,6 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onRemoveWheel: () => _removeWheel(category.id),
                       accentColor:
                           categoryColors[index % categoryColors.length],
+                      isDisabled: _isSpinning || _isGeneratingPitch,
                     );
                   },
                 ),
