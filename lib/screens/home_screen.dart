@@ -5,6 +5,7 @@ import 'package:movie_pitch_generator/services/pitch_api_service.dart';
 import 'package:movie_pitch_generator/widgets/action_buttons.dart';
 import 'package:movie_pitch_generator/widgets/generating_pitch_dialog.dart';
 import 'package:movie_pitch_generator/widgets/spinning_wheel.dart';
+import 'package:movie_pitch_generator/widgets/tutorial_dialog.dart';
 import 'package:movie_pitch_generator/widgets/wheel_category_section.dart';
 import 'package:movie_pitch_generator/screens/pitch_result_screen.dart';
 
@@ -287,6 +288,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => const TutorialDialog(),
+          );
+        },
+        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.9),
+        foregroundColor: theme.colorScheme.onPrimary,
+        tooltip: 'How to use',
+        child: const Icon(Icons.help_outline),
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
